@@ -99,3 +99,40 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.JSON(w, http.StatusOK, "User profile updated successfully", nil)
 }
+
+func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	cliams, ok := r.Context().Value("user").(*utils.Claim)
+	if !ok || cliams == nil {
+		utils.HanldeError(w, utils.NewAppError(http.StatusUnauthorized, "UNAUTHORIZED", "Unauthorized access"))
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := utils.Decode(r, &req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Failed to decode request body")
+		return
+	}
+
+	if err := utils.ValidationStruct(req); err != nil {
+		utils.HanldeError(w, err)
+		return
+	}
+
+	user, err := h.service.UpdateUser(r.Context(), cliams.UserID, req)
+	if err != nil {
+		utils.HanldeError(w, err)
+		return
+	}
+	utils.JSON(w, http.StatusOK, "User updated successfully", user)
+}
+
+func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	idPath := r.PathValue("id")
+
+	if err := uuid.Validate(idPath); err != nil {
+		utils.HanldeError(w, utils.NewAppError(http.StatusBadRequest, "BAD_REQUEST", "Invalid user ID"))
+		return
+	}
+	h.service.DeleteUser(r.Context(), idPath)
+	utils.JSON(w, http.StatusOK, "User deleted successfully", nil)
+}

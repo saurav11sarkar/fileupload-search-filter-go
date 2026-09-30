@@ -1,9 +1,11 @@
 package user
 
 type UpdateUserRequest struct {
-	Name     string `json:"name" validate:"required,min=3,max=100"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6,max=255"`
+	Name     *string `json:"name" validate:"omitempty,min=3,max=100"`
+	Email    *string `json:"email" validate:"omitempty,email"`
+	Password *string `json:"password" validate:"omitempty,min=6,max=255"`
+	Role     *string `json:"role" validate:"omitempty"`
+	Status   *string `json:"status" validate:"omitempty"`
 }
 
 type UpdateProfileRequest struct {

@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -130,6 +131,60 @@ func (r *Repository) GetSingleUser(ctx context.Context, userID string) (*User, e
 
 func (r *Repository) UpdateProfile(ctx context.Context, userID string, profile string) error {
 	_, err := r.db.Exec(ctx, `UPDATE users SET profile = $1 WHERE id = $2`, profile, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UpdateUser(ctx context.Context, userID string, updateUserDto UpdateUserRequest) (*User, error) {
+	cmdTag, err := r.db.Exec(
+		ctx,
+		`UPDATE users SET
+		name = COALESCE($1, name),
+		email = COALESCE($2, email),
+		role = COALESCE($3, role),
+		status = COALESCE($4, status)
+	WHERE id = $5`,
+		updateUserDto.Name,
+		updateUserDto.Email,
+		updateUserDto.Role,
+		updateUserDto.Status,
+		userID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return nil, utils.NewAppError(http.StatusNotFound, "NOT_FOUND", "User is not found")
+	}
+
+	var user User
+	err = r.db.QueryRow(
+		ctx,
+		`SELECT id, name, email, password, role, status, COALESCE(profile, '') AS profile, created_at, updated_at FROM users WHERE id = $1`,
+		userID,
+	).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Password,
+		&user.Role,
+		&user.Status,
+		&user.Profile,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *Repository) DeleteUser(ctx context.Context, userID string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	if err != nil {
 		return err
 	}
